@@ -1,0 +1,61 @@
+##q1
+## print the first 50 locations that has the word "Springfield" in them , ignoring letters case
+spark.sql("select distinct location_id, raw_location_text from lines_table where lower(raw_location_text) like '%springfield%' ").show(50)
+
+
+##q2
+## print 20 quotes that are located in any place that has Jerusalem in its name.
+## Note that Jerusalem may appear in any case and in any part of the location name.
+## Use JOIN for this query on another table
+
+df_locations = spark.read.format("com.databricks.spark.csv").options(header='true') \
+ .option("delimiter", ",").option("quote", '"') \
+ .option("escape", '"').option("multiLine", True) \
+ .load("/Users/talziv/pyspark/simpsons/simpsons_locations.csv")
+
+df_locations.createOrReplaceTempView("locations_table")
+
+spark.sql("select distinct l.raw_text, l.location_id, loc.name \
+from lines_table l join locations_table loc on l.location_id = loc.id \
+where loc.name like '%Jerusalem%' ").show(20)
+
+##q3
+## print first 20 most used locations with the count of lines spoken in them.
+## use GROUP BY for that
+
+spark.sql("select raw_location_text, location_id, count(location_id) as lines_count \
+from lines_table \
+group by raw_location_text,location_id \
+order by lines_count desc").show(20)
+
+##q4
+## find the seasons in which the average imdb rating was the highest.
+## Print the seasons number, the number of episodes in each one and the average rating
+## in a descending order from highest average rating to lowest.
+
+df_episodes = spark.read.format("com.databricks.spark.csv") \
+    .options(header='true') \
+    .option("delimiter", ",").option("quote", '"') \
+    .option("escape", '"').option("multiLine", True) \
+    .load("/Users/talziv/pyspark/simpsons/simpsons_episodes.csv")
+
+df_episodes.createOrReplaceTempView("episodes_table")
+
+spark.sql("select season, avg(imdb_rating) as avg_rating, count(season) as number_of_episodes \
+from episodes_table \
+group by season \
+order by avg_rating asc").show(1)
+
+##q5 
+##print the number of males and the number of females charecters in the simpsons TV show.
+df_characters = spark.read.format("com.databricks.spark.csv").options(header='true') \
+ .option("delimiter", ",").option("quote", '"') \
+ .option("escape", '"').option("multiLine", True) \
+ .load("/Users/talziv/pyspark/simpsons/simpsons_characters.csv")
+
+df_characters.createOrReplaceTempView("characters_table")
+
+spark.sql("select gender, count(gender) as count_gender \
+from characters_table \
+where gender is not Null \
+group by gender").show()
